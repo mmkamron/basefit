@@ -1,0 +1,19 @@
+version: '3.9'
+services:
+  databasedb:
+    image: postgres:latest
+    container_name: library
+    environment:
+      - POSTGRES_PASSWORD=library
+      - POSTGRES_DB=library
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./table.sql:/docker-entrypoint-initdb.d/table.sql
+
+  server:
+    build:
+      dockerfile: Dockerfile
+    container_name: server
+    ports:
+      - '8080:8080'

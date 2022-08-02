@@ -18,6 +18,9 @@ type Book struct {
 
 func main() {
 	r := mux.NewRouter()
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Welcome to the library")
+	}).Methods("GET")
 	r.HandleFunc("/book", Create).Methods("POST")
 	r.HandleFunc("/book", Read).Methods("GET")
 	r.HandleFunc("/book", Update).Methods("PUT")
