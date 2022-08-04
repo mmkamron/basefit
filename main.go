@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
@@ -16,13 +17,12 @@ type Book struct {
 	Author string `json:"author"`
 }
 
+var books = template.Must(template.ParseFiles("index.html"))
+
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Welcome to the library")
-	}).Methods("GET")
 	r.HandleFunc("/book", Create).Methods("POST")
-	r.HandleFunc("/book", Read).Methods("GET")
+	r.HandleFunc("/", Read).Methods("GET")
 	r.HandleFunc("/book", Update).Methods("PUT")
 	r.HandleFunc("/book/{id}", Delete).Methods("DELETE")
 	r.HandleFunc("/book/{id}", ReadID).Methods("GET")
@@ -43,23 +43,21 @@ func Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func Read(w http.ResponseWriter, r *http.Request) {
-	var books []string
 	db := ConnectDB()
-	rows, err := db.Query("SELECT name, author FROM books")
+	rows, err := db.Query("SELECT * FROM books")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprint(w, "couldn't query")
 	}
 	defer rows.Close()
+	list := []Book{}
 	for rows.Next() {
 		var book Book
-		if err := rows.Scan(&book.Name, &book.Author); err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&book.ID, &book.Name, &book.Author); err != nil {
+			fmt.Fprint(w, "couldn't scan")
 		}
-		books = append(books, book.Name)
+		list = append(list, book)
 	}
-	for _, book := range books {
-		fmt.Fprintf(w, "%s\n", book)
-	}
+	books.Execute(w, list)
 }
 
 func Update(w http.ResponseWriter, r *http.Request) {
@@ -87,14 +85,13 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 func ReadID(w http.ResponseWriter, r *http.Request) {
 	param := mux.Vars(r)
 	db := ConnectDB()
-	var id int
-	var book, author string
-	if err := db.QueryRow("SELECT * FROM books WHERE id=$1", param["id"]).Scan(&id, &book, &author); err != nil {
+	var book Book
+	if err := db.QueryRow("SELECT * FROM books WHERE id=$1", param["id"]).Scan(&book.ID, &book.Name, &book.Author); err != nil {
 		if err == sql.ErrNoRows {
 			fmt.Fprintf(w, "Book with id %s not found\n", param["id"])
 		} else {
 			log.Fatal(err)
 		}
 	}
-	fmt.Fprintf(w, "Name: %s\nauthor: %s", book, author)
+	fmt.Fprintf(w, "Name: %s\nauthor: %s", book.Name, book.Author)
 }

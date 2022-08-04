@@ -3,3 +3,8 @@ CREATE TABLE books (
     name text NOT NULL,
     author text NOT NULL
 );
+
+INSERT INTO books(name, author) VALUES
+('Antifragile', 'Nassim Taleb'),
+('Manhood in the making', 'David Gilmore'),
+('The blank slate', 'Steven Pinker');
