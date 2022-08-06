@@ -9,10 +9,11 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 )
 
 type Book struct {
-	ID     int    `json:"id"`
+	ID     int    `json:"id" schema:"-"`
 	Name   string `json:"name"`
 	Author string `json:"author"`
 }
@@ -31,15 +32,19 @@ func main() {
 }
 
 func Create(w http.ResponseWriter, r *http.Request) {
+	var decoder = schema.NewDecoder()
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprint(w, "Try again")
+	}
 	var book Book
-	var id int
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewDecoder(r.Body).Decode(&book)
+	if err := decoder.Decode(&book, r.PostForm); err != nil {
+		fmt.Fprint(w, "Try again")
+	}
 	db := ConnectDB()
-	if err := db.QueryRow("INSERT INTO books(name, author) VALUES($1, $2) RETURNING id", book.Name, book.Author).Scan(&id); err != nil {
+	if _, err := db.Exec("INSERT INTO books(name, author) VALUES($1, $2)", book.Name, book.Author); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(w, "Book with id %d has been added!", id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func Read(w http.ResponseWriter, r *http.Request) {
@@ -75,8 +80,12 @@ func Update(w http.ResponseWriter, r *http.Request) {
 func Delete(w http.ResponseWriter, r *http.Request) {
 	param := mux.Vars(r)
 	db := ConnectDB()
-	_, err := db.Exec("DELETE FROM books WHERE id=$1", param["id"])
-	if err != nil {
+	if _, err := db.Exec("DELETE FROM books WHERE id=$1", param["id"]); err != nil {
+		log.Fatal(err)
+	}
+
+	// To reset id auto-increment.
+	if _, err := db.Exec("SELECT SETVAL('books_id_seq',(SELECT MAX(id) FROM books))"); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Fprintf(w, "Book with id %s has been deleted", param["id"])
