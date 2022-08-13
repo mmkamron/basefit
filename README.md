@@ -15,7 +15,7 @@ docker-compose up
 
 ### Usage
 
-A web server will start and listen on `localhost:8080` listing all the books in the library. By default, there are 3 books in the database.
+A web server will start and listen on `localhost:8080` listing all the books in the library. You have to login to view the table of books. By default, there are 3 books in the database.
 - To retrieve one book, go to the `localhost:8080/book/id_number`.
 - To delete a book, make a `DELETE` request to `localhost:8080/book/id_number` endpoint.
 - To update a book, make a `PUT` request to `localhost:8080/book` endpoint with
