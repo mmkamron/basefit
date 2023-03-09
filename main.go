@@ -19,9 +19,9 @@ type Credentials struct {
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/book", Create).Methods("POST")
-	r.HandleFunc("/book", Read).Methods("GET")
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/", Create).Methods("POST")
+	r.HandleFunc("/", Read).Methods("GET")
+	r.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./html/signup.html")
 	}).Methods("GET")
 	r.HandleFunc("/signin", func(w http.ResponseWriter, r *http.Request) {
@@ -29,9 +29,11 @@ func main() {
 	}).Methods("GET")
 	r.HandleFunc("/signup", SignUp).Methods("POST")
 	r.HandleFunc("/signin", SignIn).Methods("POST")
-	r.HandleFunc("/book", Update).Methods("PUT")
-	r.HandleFunc("/book/{id}", Delete).Methods("DELETE")
-	r.HandleFunc("/book/{id}", ReadID).Methods("GET")
+	r.HandleFunc("/github", Oauth)
+	r.HandleFunc("/callback", Callback).Methods("GET")
+	r.HandleFunc("/", Update).Methods("PUT")
+	r.HandleFunc("/{id}", Delete).Methods("DELETE")
+	r.HandleFunc("/{id}", ReadID).Methods("GET")
 	http.Handle("/", r)
 	http.ListenAndServe(":8080", nil)
 }

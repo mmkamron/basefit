@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"library/github"
 	"net/http"
+	"os"
 	"text/template"
 	"time"
 
@@ -14,17 +16,44 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var books = template.Must(template.ParseFiles("./html/index.html"))
-
-var sessions = map[string]session{}
+var (
+	books                             = template.Must(template.ParseFiles("./html/index.html"))
+	ClientID                          = os.Getenv("GITHUB_CLIENT_ID")
+	ClientSecret                      = os.Getenv("GITHUB_CLIENT_SECRET")
+	oauth        github.Authenticator = github.New(ClientID, ClientSecret)
+	sessions                          = map[string]session{}
+)
 
 type session struct {
 	username string
 	expiry   time.Time
 }
 
+type User struct {
+	id    int
+	Name  string `json:"name"`
+	Login string `json:"login"`
+}
+
 func (s session) isExpired() bool {
 	return s.expiry.Before(time.Now())
+}
+
+func Cookie(w http.ResponseWriter, r *http.Request) (string, error) {
+	db := ConnectDB()
+	c, err := r.Cookie("sessionID")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			fmt.Fprint(w, "You are not authorized, please sign up to view the content")
+			http.Redirect(w, r, "/signup", http.StatusFound)
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return fmt.Sprintf("Bad request %s", err), err
+	}
+	sessionID := c.Value
+	var username string
+	_ = db.QueryRow("select username from session where value=$1", sessionID).Scan(&username)
+	return username, nil
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
@@ -74,29 +103,109 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionToken := uuid.NewString()
+	sessionID := uuid.NewString()
 	expiresAt := time.Now().Add(10 * time.Minute)
+	if err := db.QueryRow("select username from session where username=$1", creds.Username).Scan(&creds.Username); err != nil {
+		if err == sql.ErrNoRows {
+			if _, err := db.Exec("INSERT INTO session VALUES ($1, $2, $3)", sessionID, expiresAt, creds.Username); err != nil {
+				fmt.Fprintf(w, "Could not insert session into database: %s", err)
+				return
+			}
+		} else {
+			fmt.Fprintf(w, "Could not query database: %s", err)
+			return
+		}
+	}
 
-	sessions[sessionToken] = session{
-		username: creds.Username,
-		expiry:   expiresAt,
+	if _, err := db.Exec("UPDATE session SET value = $1, expiry = $2 WHERE username = $3", sessionID, expiresAt, creds.Username); err != nil {
+		fmt.Fprintf(w, "Could not update session into database: %s", err)
+		return
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "session_token",
-		Value:    sessionToken,
+		Name:     "sessionID",
+		Value:    sessionID,
 		Expires:  expiresAt,
 		HttpOnly: true,
 	})
 
-	http.Redirect(w, r, "/book", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func Oauth(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, oauth.OAuthUrl(), http.StatusFound)
+}
+
+func Callback(w http.ResponseWriter, r *http.Request) {
+	db := ConnectDB()
+	if err := r.ParseForm(); err != nil || r.FormValue("code") == "" {
+		http.Redirect(w, r, "/github", http.StatusTemporaryRedirect)
+		return
+	}
+	token, err := oauth.ObtainToken(r.FormValue("code"))
+	if err != nil || token == "" {
+		fmt.Printf("error obtaining token: %s\n", err)
+		http.Redirect(w, r, "/github", http.StatusTemporaryRedirect)
+		return
+	}
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", "https://api.github.com/user", nil)
+	req.Header = http.Header{
+		"Authorization": {"Bearer " + token},
+		"Accept":        {"application/vnd.github+json"},
+	}
+	res, _ := client.Do(req)
+	defer res.Body.Close()
+	var user User
+	if err := json.NewDecoder(res.Body).Decode(&user); err != nil {
+		fmt.Println("could not decode response")
+	}
+
+	sessionID := uuid.NewString()
+	expiresAt := time.Now().Add(10 * time.Minute)
+	if err := db.QueryRow("select username from session where username=$1", user.Login).Scan(&user.Login); err != nil {
+		if err == sql.ErrNoRows {
+			if _, err := db.Exec("INSERT INTO session VALUES ($1, $2, $3)", sessionID, expiresAt, user.Login); err != nil {
+				fmt.Fprintf(w, "Could not insert session into database: %s", err)
+				return
+			}
+		} else {
+			fmt.Fprintf(w, "Could not query database: %s", err)
+			return
+		}
+	}
+
+	if _, err := db.Exec("UPDATE session SET value = $1, expiry = $2 WHERE username = $3", sessionID, expiresAt, user.Login); err != nil {
+		fmt.Fprintf(w, "Could not insert session into database: %s", err)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "sessionID",
+		Value:    sessionID,
+		Expires:  expiresAt,
+		HttpOnly: true,
+	})
+
+	//TODO: save user info somewhere to retrieve their books later.
+	//_, err = db.Exec("INSERT INTO oauthUsers(username, sessionID) VALUES ($1, $2)", user.Login, sessionID)
+	//if err != nil {
+	//	fmt.Fprintf(w, "Could not insert user into database: %s", err)
+	//	return
+	//}
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func Create(w http.ResponseWriter, r *http.Request) {
-	if !hasCookie(w, r) {
+	username, err := Cookie(w, r)
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Errorf("Could not get cookie: %s", err)
 		return
 	}
+	db := ConnectDB()
 	var decoder = schema.NewDecoder()
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -105,28 +214,34 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	if err := decoder.Decode(&book, r.PostForm); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	db := ConnectDB()
-	if _, err := db.Exec("INSERT INTO books(name, author) VALUES($1, $2)", book.Name, book.Author); err != nil {
+	//if err := db.QueryRow("SELECT id FROM oauthUsers WHERE username = $1", user.Login).Scan(&user.id); err != nil {
+	//	fmt.Fprintf(w, "Could not query database: %s", err)
+	//}
+	if _, err := db.Exec("INSERT INTO books(name, author, username) VALUES($1, $2, $3)", book.Name, book.Author, username); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	http.Redirect(w, r, "/book", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func Read(w http.ResponseWriter, r *http.Request) {
-	if !hasCookie(w, r) {
+	var user User
+	username, err := Cookie(w, r)
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Errorf("Could not get cookie: %s", err)
 		return
 	}
 	db := ConnectDB()
-	rows, err := db.Query("SELECT * FROM books")
+	rows, err := db.Query("SELECT * FROM books where username = $1", username)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Fprint(w, "Could not query database")
+		return
 	}
 	defer rows.Close()
 	list := []Book{}
 	for rows.Next() {
 		var book Book
-		if err := rows.Scan(&book.ID, &book.Name, &book.Author); err != nil {
+		if err := rows.Scan(&book.ID, &book.Name, &book.Author, &user.Login); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		list = append(list, book)
@@ -135,14 +250,17 @@ func Read(w http.ResponseWriter, r *http.Request) {
 }
 
 func Update(w http.ResponseWriter, r *http.Request) {
-	if !hasCookie(w, r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	//if !Cookie(w, r) {
+	//	w.WriteHeader(http.StatusUnauthorized)
+	//	return
+	//}
 	var book Book
 	var id int
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewDecoder(r.Body).Decode(&book)
+	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+		fmt.Fprintf(w, "Error: %s", err.Error())
+		return
+	}
 	db := ConnectDB()
 	if err := db.QueryRow("update books set name = $1, author = $2 where id = $3 returning id", book.Name, book.Author, book.ID).Scan(&id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -151,10 +269,10 @@ func Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func Delete(w http.ResponseWriter, r *http.Request) {
-	if !hasCookie(w, r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	//if !Cookie(w, r) {
+	//	w.WriteHeader(http.StatusUnauthorized)
+	//	return
+	//}
 	param := mux.Vars(r)
 	db := ConnectDB()
 	if _, err := db.Exec("DELETE FROM books WHERE id=$1", param["id"]); err != nil {
@@ -169,10 +287,10 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReadID(w http.ResponseWriter, r *http.Request) {
-	if !hasCookie(w, r) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	//if !Cookie(w, r) {
+	//	w.WriteHeader(http.StatusUnauthorized)
+	//	return
+	//}
 	param := mux.Vars(r)
 	db := ConnectDB()
 	var book Book
@@ -184,31 +302,4 @@ func ReadID(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Fprintf(w, "Name: %s\nauthor: %s", book.Name, book.Author)
-}
-
-func hasCookie(w http.ResponseWriter, r *http.Request) bool {
-	c, err := r.Cookie("session_token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprint(w, "You are not authorized, please sign in to view the content")
-			return false
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		return false
-	}
-	sessionToken := c.Value
-	userSession, ok := sessions[sessionToken]
-	if !ok {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "You are not authorized, please sign in to view the content")
-		return false
-	}
-	if userSession.isExpired() {
-		delete(sessions, sessionToken)
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "You are not authorized, please sign in to view the content")
-		return false
-	}
-	return true
 }
