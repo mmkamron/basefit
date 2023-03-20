@@ -1,4 +1,4 @@
-module library
+module github.com/mmkamron/library
 
 go 1.17
 

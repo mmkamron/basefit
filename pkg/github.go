@@ -1,4 +1,4 @@
-package github
+package pkg
 
 import (
 	"encoding/json"
@@ -72,7 +72,7 @@ func (g github) ObtainToken(code string) (string, error) {
 		AccessToken string `json:"access_token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return "", fmt.Errorf("failed to decode github response: %v", err)
+		return "", fmt.Errorf("failed to decode pkg response: %v", err)
 	}
 	return response.AccessToken, nil
 }

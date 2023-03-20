@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"database/sql"
@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	host     = "localhost"
+	host     = "172.17.0.1"
 	port     = 5432
-	user     = "arch"
-	password = "123"
+	user     = "postgres"
+	password = "library"
 	dbname   = "library"
 )
 

@@ -1,6 +1,16 @@
 version: '3.9'
 services:
-  databasedb:
+  server:
+    build:
+      dockerfile: Dockerfile
+    container_name: server
+    ports:
+      - '8080:8080'
+    depends_on:
+      db:
+        condition: service_started
+  db:
+    restart: always
     image: postgres:latest
     container_name: library
     environment:
@@ -10,10 +20,3 @@ services:
       - '5432:5432'
     volumes:
       - ./table.sql:/docker-entrypoint-initdb.d/table.sql
-
-  server:
-    build:
-      dockerfile: Dockerfile
-    container_name: server
-    ports:
-      - '8080:8080'
