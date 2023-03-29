@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/mmkamron/library/app/handler"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -19,11 +20,15 @@ func main() {
 	}).Methods("GET")
 	r.HandleFunc("/signup", handler.SignUp).Methods("POST")
 	r.HandleFunc("/signin", handler.SignIn).Methods("POST")
+	r.HandleFunc("/logout", handler.Logout)
 	r.HandleFunc("/pkg", handler.Oauth)
 	r.HandleFunc("/callback", handler.Callback).Methods("GET")
 	r.HandleFunc("/", handler.Update).Methods("PUT")
 	r.HandleFunc("/{id}", handler.Delete).Methods("DELETE")
 	r.HandleFunc("/{id}", handler.ReadID).Methods("GET")
 	http.Handle("/", r)
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

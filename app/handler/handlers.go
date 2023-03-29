@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/mmkamron/library/pkg"
 	"net/http"
-	"os"
 	"text/template"
 	"time"
 
@@ -14,10 +13,10 @@ import (
 )
 
 var (
-	test                           = "test"
+	config                         = pkg.Load()
 	books                          = template.Must(template.ParseFiles("./web/index.html"))
-	ClientID                       = os.Getenv("GITHUB_CLIENT_ID")
-	ClientSecret                   = os.Getenv("GITHUB_CLIENT_SECRET")
+	ClientID                       = config.ClientID
+	ClientSecret                   = config.ClientSecret
 	oauth        pkg.Authenticator = pkg.New(ClientID, ClientSecret)
 	sessions                       = map[string]session{}
 )

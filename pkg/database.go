@@ -8,16 +8,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	host     = "172.17.0.1"
-	port     = 5432
-	user     = "postgres"
-	password = "library"
-	dbname   = "library"
-)
-
 func ConnectDB() *sql.DB {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	config := Load()
+	psqlInfo := fmt.Sprintf("host=db port=%d user=%s password=%s dbname=%s sslmode=disable", config.Port, config.User, config.Password, config.DBname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal(err)

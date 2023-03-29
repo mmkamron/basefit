@@ -18,14 +18,24 @@ func Cookie(w http.ResponseWriter, r *http.Request) (string, error) {
 	if err != nil {
 		if err == http.ErrNoCookie {
 			http.Redirect(w, r, "/signup", http.StatusFound)
-			return "Redirecting to signup", err
+			return "Redirecting to signup", nil
 		}
-		return fmt.Sprintf("Bad request %s", err), err
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return "", err
 	}
 	sessionID := c.Value
 	var username string
 	_ = db.QueryRow("select username from session where value=$1", sessionID).Scan(&username)
 	return username, nil
+}
+
+func ClearCookie(w http.ResponseWriter) {
+	c := &http.Cookie{
+		Name:   "sessionID",
+		Value:  "",
+		MaxAge: -1,
+	}
+	http.SetCookie(w, c)
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
@@ -103,6 +113,16 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+	c := &http.Cookie{
+		Name:   "sessionID",
+		Value:  "",
+		MaxAge: -1,
+	}
+	http.SetCookie(w, c)
+	http.Redirect(w, r, "/signin", http.StatusFound)
 }
 
 func Oauth(w http.ResponseWriter, r *http.Request) {

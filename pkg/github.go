@@ -34,7 +34,7 @@ func New(clientId, clientSecret string) Authenticator {
 		clientSecret: clientSecret,
 		defaultScope: "user:email",
 		userEndpoint: "https://api.github.com/user",
-		redirectUri:  "http://localhost:8080/callback",
+		redirectUri:  "http://mmkamron.jprq.live/callback",
 	}
 }
 
