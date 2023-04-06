@@ -6,13 +6,14 @@ import (
 )
 
 type Config struct {
-	Host         string `mapstructure:"DB_HOST"`
 	Port         int    `mapstructure:"DB_PORT"`
 	User         string `mapstructure:"DB_USER"`
 	Password     string `mapstructure:"DB_PASSWORD"`
 	DBname       string `mapstructure:"DB_NAME"`
-	ClientID     string `mapstructure:"GITHUB_CLIENT_ID"`
-	ClientSecret string `mapstructure:"GITHUB_CLIENT_SECRET"`
+	ClientID     string `mapstructure:"GOOGLE_CLIENT_ID"`
+	ClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
+	CookieSecret string `mapstructure:"COOKIE_SECRET"`
+	State        string `mapstructure:"STATE"`
 }
 
 func Load() (config Config) {

@@ -1,0 +1,28 @@
+{{ template "header.html" .}}
+<table>
+    <tr>
+        <th>Date</th>
+        <th>Calories</th>
+        <th>Protein</th>
+    </tr>
+{{ range . }}
+    <tr>
+        <td>{{ .Date }}</td>
+        <td>{{ .Calories }}kcal</td>
+        <td>{{ .Protein }}</td>
+    </tr>
+{{ end }}
+</table>
+<div>
+    <form action="/nutrition" method="POST">
+        <label>Calories</label>
+        <input type="text" name="calories">
+        <label>Protein</label>
+        <input type="text" name="protein">
+        <input type="submit" value="Submit">
+    </form>
+</div>
+
+<!--<a href="/logout">Log out</a>-->
+</body>
+</html>
