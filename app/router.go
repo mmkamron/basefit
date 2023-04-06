@@ -23,7 +23,7 @@ func Init() {
 		log.Println(err)
 	}
 
-	r.Use(sessions.Sessions("mysession", store))
+	r.Use(sessions.Sessions("session", store))
 
 	gym := r.Group("/gym")
 	gym.Use(handler.Auth)
