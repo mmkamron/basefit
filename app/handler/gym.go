@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/mmkamron/library/pkg"
+	"github.com/mmkamron/basefit/pkg"
 	"net/http"
 	"time"
 )

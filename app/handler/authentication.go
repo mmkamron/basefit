@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/mmkamron/library/pkg"
+	"github.com/mmkamron/basefit/pkg"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"io"

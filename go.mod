@@ -1,4 +1,4 @@
-module github.com/mmkamron/library
+module github.com/mmkamron/basefit
 
 go 1.20
 

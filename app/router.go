@@ -4,8 +4,8 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/postgres"
 	"github.com/gin-gonic/gin"
-	"github.com/mmkamron/library/app/handler"
-	"github.com/mmkamron/library/pkg"
+	"github.com/mmkamron/basefit/app/handler"
+	"github.com/mmkamron/basefit/pkg"
 	"log"
 	"net/http"
 )

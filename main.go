@@ -1,6 +1,6 @@
 package main
 
-import "github.com/mmkamron/library/app"
+import "github.com/mmkamron/basefit/app"
 
 func main() {
 	app.Init()
