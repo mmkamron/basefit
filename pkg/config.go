@@ -15,6 +15,7 @@ type Config struct {
 	ClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
 	CookieSecret string `mapstructure:"COOKIE_SECRET"`
 	State        string `mapstructure:"STATE"`
+	ApiNinjas    string `mapstructure:"API_NINJAS"`
 }
 
 func Load() (config Config) {

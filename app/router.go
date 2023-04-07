@@ -38,9 +38,12 @@ func Init() {
 	nutrition.POST("/", handler.CreateNutrition)
 	//nutrition.DELETE("/", handler.DeleteNutrition)
 
+	// TODO: group these routes together
 	r.GET("/oauth", handler.Oauth)
 	r.GET("/googlecallback", handler.Callback)
 	r.GET("/logout", handler.Logout)
+
+	r.GET("/ingredients/:item", handler.Ingredients)
 
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
