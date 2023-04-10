@@ -87,7 +87,7 @@ func Auth(c *gin.Context) {
 	session := sessions.Default(c)
 	userID := session.Get("SessionID")
 	if userID == nil {
-		c.Redirect(http.StatusTemporaryRedirect, "/oauth")
+		c.Redirect(http.StatusTemporaryRedirect, "/unauthorized")
 		return
 	}
 	c.Set("userID", userID)
