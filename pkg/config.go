@@ -11,6 +11,7 @@ type Config struct {
 	User         string `mapstructure:"DB_USER"`
 	Password     string `mapstructure:"DB_PASSWORD"`
 	DBname       string `mapstructure:"DB_NAME"`
+  RedirectUri  string `mapstructure:"REDIRECT_URI"`
 	ClientID     string `mapstructure:"GOOGLE_CLIENT_ID"`
 	ClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
 	CookieSecret string `mapstructure:"COOKIE_SECRET"`

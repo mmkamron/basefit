@@ -14,13 +14,11 @@ import (
 
 var (
 	config            = pkg.Load()
-	ClientID          = config.ClientID
-	ClientSecret      = config.ClientSecret
 	randomState       = config.State
 	googleOauthConfig = &oauth2.Config{
-		RedirectURL:  "http://localhost:8080/googlecallback",
-		ClientID:     ClientID,
-		ClientSecret: ClientSecret,
+		RedirectURL:  config.RedirectUri,
+		ClientID:     config.ClientID ,    
+		ClientSecret: config.ClientSecret ,
 		Scopes:       []string{"openid"},
 		Endpoint:     google.Endpoint,
 	}
