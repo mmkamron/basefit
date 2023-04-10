@@ -1,28 +1,30 @@
 {{ template "header.html" .}}
-<table>
+<table class="table">
+  <thead class="table-info">
     <tr>
         <th>Date</th>
         <th>Calories</th>
         <th>Protein</th>
     </tr>
+  </thead>
 {{ range . }}
     <tr>
         <td>{{ .Date }}</td>
         <td>{{ .Calories }}kcal</td>
-        <td>{{ .Protein }}</td>
+        <td>{{ .Protein }}g</td>
     </tr>
 {{ end }}
 </table>
-<div>
-    <form action="/nutrition" method="POST">
-        <label>Calories</label>
-        <input type="text" name="calories">
-        <label>Protein</label>
-        <input type="text" name="protein">
-        <input type="submit" value="Submit">
-    </form>
-</div>
-
-<!--<a href="/logout">Log out</a>-->
+<form action="/nutrition" method="POST">
+  <div class="mb-3">
+    <label class="form-label">Calories</label>
+    <input type="number" name="calories" class="form-control" aria-label="Calories">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Protein</label>
+    <input type="number" name="protein" class="form-control" aria-label="Protein">
+  </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
 </body>
 </html>

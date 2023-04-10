@@ -1,10 +1,12 @@
 {{ template "header.html" .}}
-<table>
+<table class="table">
+  <thead class="table-info">
     <tr>
         <th>Date</th>
         <th>Activity</th>
         <th>Weight</th>
     </tr>
+  </thead>
 {{ range . }}
     <tr>
         <td>{{ .Date }}</td>
@@ -13,16 +15,16 @@
     </tr>
 {{ end }}
 </table>
-<div>
-    <form action="/gym" method="POST">
-        <label>Activity</label>
-        <input type="text" name="activity">
-        <label>Weight</label>
-        <input type="text" name="weight">
-        <input type="submit" value="Submit">
-    </form>
-</div>
-
-<!--<a href="/logout">Log out</a>-->
+<form action="/gym" method="POST">
+  <div class="mb-3">
+    <label class="form-label">Activity</label>
+    <input type="text" name="activity" class="form-control" aria-label="Activity">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Weight</label>
+    <input type="number" name="weight" class="form-control" aria-label="Weight">
+  </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
 </body>
 </html>

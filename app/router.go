@@ -42,8 +42,15 @@ func Init() {
 	r.GET("/oauth", handler.Oauth)
 	r.GET("/googlecallback", handler.Callback)
 	r.GET("/logout", handler.Logout)
+	r.GET("/unauthorized", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "401.html", nil)
+	})
 
-	r.GET("/ingredients/:item", handler.Ingredients)
+	ingredients := r.Group("/ingredients")
+	ingredients.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "ingredients.html", nil)
+	})
+	ingredients.POST("/", handler.Ingredients)
 
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)

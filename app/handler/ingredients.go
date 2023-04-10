@@ -7,17 +7,23 @@ import (
 	"github.com/mmkamron/basefit/pkg"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func Ingredients(c *gin.Context) {
 	config := pkg.Load()
-	item := c.Param("item")
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.api-ninjas.com/v1/nutrition?query=%s", item), nil)
+	food := c.PostForm("food")
+	size := c.PostForm("size")
+  if size != "" {
+    size += string('g')
+  }
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.api-ninjas.com/v1/nutrition?query=%s+%s", size, strings.ReplaceAll(food, " ", "+")), nil)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	req.Header.Set("X-Api-Key", config.ApiNinjas)
+	req.Header.Set("application", "x-www-form-urlencoded")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
@@ -27,26 +33,27 @@ func Ingredients(c *gin.Context) {
 
 	body, _ := io.ReadAll(resp.Body)
 	type Data struct {
-		Name          string  `json:"name"`
-		Calories      float64 `json:"calories"`
-		ServingSize   float64 `json:"serving_size_g"`
-		FatTotal      float64 `json:"fat_total_g"`
-		Protein       float64 `json:"protein_g"`
-		Carbohydrates float64 `json:"carbohydrates_total_g"`
+		Name     string  `json:"name"`
+		Size     float64 `json:"serving_size_g"`
+		Calories float64 `json:"calories"`
+		Protein  float64 `json:"protein_g"`
+		Fat      float64 `json:"fat_total_g"`
+		Carbs    float64 `json:"carbohydrates_total_g"`
 	}
 	var data []Data
 	if err := json.Unmarshal(body, &data); err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	for _, v := range data {
-		c.JSON(http.StatusOK, gin.H{
-			"name":          v.Name,
-			"calories":      v.Calories,
-			"serving_size":  v.ServingSize,
-			"fat_total":     v.FatTotal,
-			"protein":       v.Protein,
-			"carbohydrates": v.Carbohydrates,
-		})
-	}
+	c.HTML(http.StatusOK, "ingredients.html", data)
+	//for _, v := range data {
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"name":          v.Name,
+	//		"calories":      v.Calories,
+	//		"serving_size":  v.ServingSize,
+	//		"fat_total":     v.FatTotal,
+	//		"protein":       v.Protein,
+	//		"carbohydrates": v.Carbohydrates,
+	//	})
+	//}
 }
