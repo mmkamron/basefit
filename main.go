@@ -1,7 +1,7 @@
 package main
 
-import "github.com/mmkamron/basefit/api"
+import "github.com/mmkamron/basefit/app"
 
 func main() {
-	api.Init()
+	app.Init()
 }
