@@ -12,6 +12,10 @@
         <td>{{ .Date }}</td>
         <td>{{ .Activity }}</td>
         <td>{{ .Weight }}kg</td>
+        <td>
+            <i class="bi bi-trash" id="{{ .ID }}"></i>
+            <!-- <i class="bi bi-pen" id="{{ .ID }}"></i> -->
+        </td>
     </tr>
 {{ end }}
 </table>
@@ -26,5 +30,6 @@
   </div>
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
+<script src="/static/script.js"></script>
 </body>
 </html>
