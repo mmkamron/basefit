@@ -1,10 +1,11 @@
-package handler
+package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/mmkamron/basefit/pkg"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mmkamron/basefit/pkg"
 )
 
 type Nutrition struct {
@@ -17,7 +18,10 @@ func ReadNutrition(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	db := pkg.ConnectDB()
 	var nutrition Nutrition
-	rows, err := db.Query("SELECT date_time, calories, protein FROM nutrition_logs WHERE user_id = $1", userID)
+	rows, err := db.Query(
+		"SELECT date_time, calories, protein FROM nutrition_logs WHERE user_id = $1",
+		userID,
+	)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return

@@ -1,23 +1,32 @@
-package handler
+package api
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/mmkamron/basefit/pkg"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mmkamron/basefit/pkg"
 )
 
 func Ingredients(c *gin.Context) {
 	config := pkg.Load()
 	food := c.PostForm("food")
 	size := c.PostForm("size")
-  if size != "" {
-    size += string('g')
-  }
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.api-ninjas.com/v1/nutrition?query=%s+%s", size, strings.ReplaceAll(food, " ", "+")), nil)
+	if size != "" {
+		size += string('g')
+	}
+	req, err := http.NewRequest(
+		"GET",
+		fmt.Sprintf(
+			"https://api.api-ninjas.com/v1/nutrition?query=%s+%s",
+			size,
+			strings.ReplaceAll(food, " ", "+"),
+		),
+		nil,
+	)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return

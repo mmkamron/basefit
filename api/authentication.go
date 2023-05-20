@@ -1,15 +1,16 @@
-package handler
+package api
 
 import (
 	"encoding/json"
+	"io"
+	"log"
+	"net/http"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/mmkamron/basefit/pkg"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"io"
-	"log"
-	"net/http"
 )
 
 var (
@@ -17,8 +18,8 @@ var (
 	randomState       = config.State
 	googleOauthConfig = &oauth2.Config{
 		RedirectURL:  config.RedirectUri,
-		ClientID:     config.ClientID ,    
-		ClientSecret: config.ClientSecret ,
+		ClientID:     config.ClientID,
+		ClientSecret: config.ClientSecret,
 		Scopes:       []string{"openid"},
 		Endpoint:     google.Endpoint,
 	}

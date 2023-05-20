@@ -1,10 +1,11 @@
-package handler
+package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/mmkamron/basefit/pkg"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mmkamron/basefit/pkg"
 )
 
 type Activities struct {
@@ -18,7 +19,10 @@ func Read(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	db := pkg.ConnectDB()
 	var activities Activities
-	rows, err := db.Query("SELECT date_time, activity, weight_lifted FROM exercise_logs WHERE user_id = $1", userID)
+	rows, err := db.Query(
+		"SELECT date_time, activity, weight_lifted FROM exercise_logs WHERE user_id = $1",
+		userID,
+	)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
