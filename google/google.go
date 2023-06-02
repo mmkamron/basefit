@@ -7,14 +7,15 @@ import (
 	"os"
 )
 
-type google struct {
-	clientID     string
-	clientSecret string
-	redirectURI  string
-	userEndpoint string
+func Redirect(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, fmt.Sprintf(
+		"https://accounts.google.com/o/oauth2/v2/auth?client_id=%s&redirect_uri=%s&response_type=code&scope=https://www.googleapis.com/auth/userinfo.profile",
+		os.Getenv("CLIENT_ID"),
+		os.Getenv("REDIRECT_URI"),
+	), http.StatusTemporaryRedirect)
 }
 
-func (g google) Authenticate(w http.ResponseWriter, r *http.Request) {
+func Authenticate(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	if code == "" {
 		http.Redirect(w, r, "/oauth", http.StatusTemporaryRedirect)
