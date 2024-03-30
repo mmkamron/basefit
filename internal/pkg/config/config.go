@@ -19,9 +19,9 @@ type DB struct {
 }
 
 func Load(path string) *Config {
-	var cfg Config
-	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+	var conf Config
+	if err := cleanenv.ReadConfig(path, &conf); err != nil {
 		log.Fatal("couldn't read config")
 	}
-	return &cfg
+	return &conf
 }

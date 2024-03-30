@@ -2,4 +2,5 @@ db:
   host: localhost
   port: 5432
   user: postgres
+  password: postgres
   name: basefit
