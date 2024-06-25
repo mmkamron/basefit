@@ -7,7 +7,10 @@ import (
 )
 
 type Config struct {
-	DB `yaml:"db"`
+	Addr   string `yaml:"addr"`
+	DB     `yaml:"db"`
+	Google `yaml:"google"`
+	Smtp   `yaml:"smtp"`
 }
 
 type DB struct {
@@ -16,6 +19,19 @@ type DB struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	Name     string `yaml:"name"`
+}
+
+type Google struct {
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+}
+
+type Smtp struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Sender   string `yaml:"sender"`
 }
 
 func Load(path string) *Config {
