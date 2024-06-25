@@ -21,6 +21,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		app.logger.Error(err.Error())
 		http.Error(w, "could not process your request", http.StatusBadRequest)
+		return
 	}
 
 	trainer := &data.Trainer{
@@ -88,5 +89,64 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		app.logger.Error(err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+}
+
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		TokenPlaintext string `json:"token"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		app.logger.Error(err.Error())
+		http.Error(w, "could not process your request", http.StatusBadRequest)
+		return
+	}
+
+	v := validator.New()
+
+	if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
+		http.Error(w, "could not validate the data", http.StatusUnprocessableEntity)
+		return
+	}
+
+	trainer, err := app.models.Trainers.GetForToken(data.ScopeActivation, input.TokenPlaintext)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			v.AddError("token", "invalid or expired activation token")
+			http.Error(w, "could not validate the data", http.StatusUnprocessableEntity)
+		default:
+			app.logger.Error(err.Error())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	trainer.Activated = true
+
+	err = app.models.Trainers.Update(trainer)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			http.Error(w, "data conflict", http.StatusConflict)
+		default:
+			app.logger.Error(err.Error())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	err = app.models.Tokens.DeleteAllForTrainer(data.ScopeActivation, trainer.ID)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, trainer, nil)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 }

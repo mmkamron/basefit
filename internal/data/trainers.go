@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"time"
@@ -85,7 +86,7 @@ func (m TrainerModel) GetByEmail(email string) (*Trainer, error) {
 
 func (m TrainerModel) Update(trainer *Trainer) error {
 	query := `
-        UPDATE users 
+        UPDATE trainer 
         SET name = $1, email = $2, password_hash = $3, activated = $4
         WHERE id = $5
         RETURNING id`
@@ -111,6 +112,43 @@ func (m TrainerModel) Update(trainer *Trainer) error {
 		}
 	}
 	return nil
+}
+
+func (m TrainerModel) GetForToken(tokenScope, tokenPlaintext string) (*Trainer, error) {
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+	query := `
+		SELECT trainer.id, trainer.name, trainer.email, trainer.password_hash, trainer.activated
+        FROM trainer
+        INNER JOIN token
+        ON trainer.id = token.trainer_id
+        WHERE token.hash = $1
+        AND token.scope = $2
+        AND token.expiry > $3`
+
+	args := []interface{}{tokenHash[:], tokenScope, time.Now()}
+
+	var trainer Trainer
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
+		&trainer.ID,
+		&trainer.Name,
+		&trainer.Email,
+		&trainer.Password.hash,
+		&trainer.Activated,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &trainer, nil
 }
 
 func (p *password) Set(plaintextPassword string) error {
