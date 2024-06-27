@@ -19,6 +19,8 @@ type TrainerModel struct {
 	DB *sql.DB
 }
 
+var AnonymousTrainer = &Trainer{}
+
 type Trainer struct {
 	ID        int64
 	Email     string
@@ -30,6 +32,10 @@ type Trainer struct {
 type password struct {
 	plaintext *string
 	hash      []byte
+}
+
+func (t *Trainer) IsAnonymous() bool {
+	return t == AnonymousTrainer
 }
 
 func (m TrainerModel) Insert(trainer *Trainer) error {
