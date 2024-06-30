@@ -5,148 +5,160 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/mmkamron/basefit/internal/data"
-	"github.com/mmkamron/basefit/internal/validator"
 )
 
-func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) createTrainerHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Name     string
-		Email    string
-		Password string
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "could not process your request", http.StatusBadRequest)
-		return
-	}
-
-	trainer := &data.Trainer{
-		Name:      input.Name,
-		Email:     input.Email,
-		Activated: false,
-	}
-
-	if err := trainer.Password.Set(input.Password); err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "could not process your request", http.StatusBadRequest)
-	}
-
-	v := validator.New()
-
-	if data.ValidateTrainer(v, trainer); !v.Valid() {
-		http.Error(w, "could not validate the data", http.StatusUnprocessableEntity)
-		return
-	}
-
-	err := app.models.Trainers.Insert(trainer)
-	if err != nil {
-		switch {
-		case errors.Is(err, data.ErrDuplicateEmail):
-			v.AddError("email", "a trainer with this email address already exists")
-			http.Error(w, "a trainer with this email address already exists", http.StatusUnprocessableEntity)
-			return
-		default:
-			app.logger.Error(err.Error())
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-		}
-		return
-	}
-
-	token, err := app.models.Tokens.New(trainer.ID, 3*24*time.Hour, data.ScopeActivation)
-	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	app.wg.Add(1)
-
-	go func() {
-		defer app.wg.Done()
-
-		defer func() {
-			if err := recover(); err != nil {
-				app.logger.Error(fmt.Errorf("%s", err).Error())
-			}
-		}()
-
-		data := map[string]interface{}{
-			"activationToken": token.Plaintext,
-			"ID":              trainer.ID,
-		}
-
-		err := app.mailer.Send(trainer.Email, "user_welcome.tmpl", data)
-		if err != nil {
-			app.logger.Error(err.Error())
-		}
-	}()
-
-	err = app.writeJSON(w, http.StatusAccepted, trainer, nil)
-	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-	}
-}
-
-func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		TokenPlaintext string `json:"token"`
+		Email      string
+		Name       string
+		Experience int16
+		Activities []string
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "could not process your request", http.StatusBadRequest)
+		app.badRequestResponse(w, r, err)
 		return
 	}
 
-	v := validator.New()
+	trainer := &data.Trainer{
+		Email:      input.Email,
+		Name:       input.Name,
+		Experience: input.Experience,
+		Activities: input.Activities,
+	}
 
-	if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
-		http.Error(w, "could not validate the data", http.StatusUnprocessableEntity)
+	//TODO:input validation
+
+	err = app.models.Trainers.Insert(trainer)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	trainer, err := app.models.Trainers.GetForToken(data.ScopeActivation, input.TokenPlaintext)
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/trainers/%d", trainer.ID))
+
+	err = app.writeJSON(w, http.StatusCreated, envelope{"trainer": trainer}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) showTrainerHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	trainer, err := app.models.Trainers.Get(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			v.AddError("token", "invalid or expired activation token")
-			http.Error(w, "could not validate the data", http.StatusUnprocessableEntity)
+			app.notFoundResponse(w, r)
 		default:
-			app.logger.Error(err.Error())
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			app.serverErrorResponse(w, r, err)
 		}
 		return
 	}
 
-	trainer.Activated = true
+	err = app.writeJSON(w, http.StatusOK, envelope{"trainer": trainer}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) showTrainersHandler(w http.ResponseWriter, r *http.Request) {
+	trainers, err := app.models.Trainers.GetAll()
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"trainers": trainers}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) updateTrainerHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	trainer, err := app.models.Trainers.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	var input struct {
+		Email      string
+		Name       string
+		Experience int16
+		Activities []string
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	trainer.Email = input.Email
+	trainer.Name = input.Name
+	trainer.Experience = input.Experience
+	trainer.Activities = input.Activities
+
+	//TODO:input validation
 
 	err = app.models.Trainers.Update(trainer)
 	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"trainer": trainer}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) deleteTrainerHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	err = app.models.Trainers.Delete(id)
+	if err != nil {
 		switch {
-		case errors.Is(err, data.ErrEditConflict):
-			http.Error(w, "data conflict", http.StatusConflict)
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
 		default:
-			app.logger.Error(err.Error())
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			app.serverErrorResponse(w, r, err)
 		}
 		return
 	}
 
-	err = app.models.Tokens.DeleteAllForTrainer(data.ScopeActivation, trainer.ID)
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "movie successfully deleted"}, nil)
 	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = app.writeJSON(w, http.StatusOK, trainer, nil)
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
+		app.serverErrorResponse(w, r, err)
 	}
 }
