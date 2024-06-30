@@ -29,7 +29,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 
 		authorizationHeader := r.Header.Get("Authorization")
 		if authorizationHeader == "" {
-			r = app.contextSetTrainer(r, data.AnonymousTrainer)
+			r = app.contextSetUser(r, data.AnonymousUser)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -49,7 +49,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-		trainer, err := app.models.Trainers.GetForToken(data.ScopeAuthentication, token)
+		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
@@ -60,7 +60,35 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-		r = app.contextSetTrainer(r, trainer)
+		r = app.contextSetUser(r, user)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+
+	return app.requireAuthenticatedUser(fn)
+}
+
+func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
 
 		next.ServeHTTP(w, r)
 	})

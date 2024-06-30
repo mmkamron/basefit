@@ -12,23 +12,23 @@ import (
 )
 
 const (
-	ScopeActivation = "activation"
+	ScopeActivation     = "activation"
 	ScopeAuthentication = "authentication"
 )
 
 type Token struct {
-	Plaintext string `json:"token"`
-	Hash      []byte `json:"-"`
-	TrainerID int64 `json:"-"`
+	Plaintext string    `json:"token"`
+	Hash      []byte    `json:"-"`
+	UserID    int64     `json:"-"`
 	Expiry    time.Time `json:"expiry"`
-	Scope     string `json:"-"`
+	Scope     string    `json:"-"`
 }
 
-func generateToken(trainerID int64, ttl time.Duration, scope string) (*Token, error) {
+func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token := Token{
-		TrainerID: trainerID,
-		Expiry:    time.Now().Add(ttl),
-		Scope:     scope,
+		UserID: userID,
+		Expiry: time.Now().Add(ttl),
+		Scope:  scope,
 	}
 
 	randomBytes := make([]byte, 16)
@@ -55,8 +55,8 @@ type TokenModel struct {
 	DB *sql.DB
 }
 
-func (m TokenModel) New(trainerID int64, ttl time.Duration, scope string) (*Token, error) {
-	token, err := generateToken(trainerID, ttl, scope)
+func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -67,10 +67,10 @@ func (m TokenModel) New(trainerID int64, ttl time.Duration, scope string) (*Toke
 
 func (m TokenModel) Insert(token *Token) error {
 	query := `
-	INSERT INTO token (hash, trainer_id, expiry, scope)
+	INSERT INTO tokens (hash, user_id, expiry, scope)
 	VALUES ($1, $2, $3, $4)`
 
-	args := []interface{}{token.Hash, token.TrainerID, token.Expiry, token.Scope}
+	args := []interface{}{token.Hash, token.UserID, token.Expiry, token.Scope}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -79,14 +79,14 @@ func (m TokenModel) Insert(token *Token) error {
 	return err
 }
 
-func (m TokenModel) DeleteAllForTrainer(scope string, trainerID int64) error {
+func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 	query := `
-	DELETE FROM token
-	WHERE scope = $1 AND trainer_id = $2`
+	DELETE FROM tokens
+	WHERE scope = $1 AND user_id = $2`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := m.DB.ExecContext(ctx, query, scope, trainerID)
+	_, err := m.DB.ExecContext(ctx, query, scope, userID)
 	return err
 }

@@ -9,18 +9,18 @@ import (
 
 type contextKey string
 
-const trainerContextKey = contextKey("trainer")
+const userContextKey = contextKey("user")
 
-func (app *application) contextSetTrainer(r *http.Request, trainer *data.Trainer) *http.Request {
-	ctx := context.WithValue(r.Context(), trainerContextKey, trainer)
+func (app *application) contextSetUser(r *http.Request, user *data.User) *http.Request {
+	ctx := context.WithValue(r.Context(), userContextKey, user)
 	return r.WithContext(ctx)
 }
 
-func (app *application) contextGetTrainer(r *http.Request) *data.Trainer {
-	trainer, ok := r.Context().Value(trainerContextKey).(*data.Trainer)
+func (app *application) contextGetUser(r *http.Request) *data.User {
+	user, ok := r.Context().Value(userContextKey).(*data.User)
 	if !ok {
-		panic("missing trainer value in request context")
+		panic("missing user value in request context")
 	}
 
-	return trainer
+	return user
 }

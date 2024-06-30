@@ -33,7 +33,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-	trainer, err := app.models.Trainers.GetByEmail(input.Email)
+	user, err := app.models.Users.GetByEmail(input.Email)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -45,7 +45,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-	match, err := trainer.Password.Matches(input.Password)
+	match, err := user.Password.Matches(input.Password)
 	if err != nil {
 		app.logger.Error(err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -56,7 +56,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
-	token, err := app.models.Tokens.New(trainer.ID, 24*time.Hour, data.ScopeAuthentication)
+	token, err := app.models.Tokens.New(user.ID, 24*time.Hour, data.ScopeAuthentication)
 	if err != nil {
 		app.logger.Error(err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
