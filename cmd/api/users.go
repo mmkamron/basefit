@@ -50,16 +50,14 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 			http.Error(w, "a user with this email address already exists", http.StatusUnprocessableEntity)
 			return
 		default:
-			app.logger.Error(err.Error())
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			app.serverErrorResponse(w, r, err)
 		}
 		return
 	}
 
 	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
@@ -87,8 +85,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 
 	err = app.writeJSON(w, http.StatusAccepted, user, nil)
 	if err != nil {
-		app.logger.Error(err.Error())
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
 
@@ -118,8 +115,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 			v.AddError("token", "invalid or expired activation token")
 			http.Error(w, "could not validate the data", http.StatusUnprocessableEntity)
 		default:
-			app.logger.Error(err.Error())
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			app.serverErrorResponse(w, r, err)
 		}
 		return
 	}
@@ -132,21 +128,20 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		case errors.Is(err, data.ErrEditConflict):
 			http.Error(w, "data conflict", http.StatusConflict)
 		default:
-			app.logger.Error(err.Error())
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			app.serverErrorResponse(w, r, err)
 		}
 		return
 	}
 
 	err = app.models.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
 	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
 	err = app.writeJSON(w, http.StatusOK, user, nil)
 	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 }

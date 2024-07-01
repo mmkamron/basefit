@@ -89,6 +89,7 @@ func (app *application) showTrainersHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// TODO:fix data race - versioning
 func (app *application) updateTrainerHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
@@ -108,9 +109,9 @@ func (app *application) updateTrainerHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	var input struct {
-		Email      string
-		Name       string
-		Experience int16
+		Email      *string
+		Name       *string
+		Experience *int16
 		Activities []string
 	}
 
@@ -120,10 +121,18 @@ func (app *application) updateTrainerHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	trainer.Email = input.Email
-	trainer.Name = input.Name
-	trainer.Experience = input.Experience
-	trainer.Activities = input.Activities
+	if input.Email != nil {
+		trainer.Email = *input.Email
+	}
+	if input.Name != nil {
+		trainer.Name = *input.Name
+	}
+	if input.Experience != nil {
+		trainer.Experience = *input.Experience
+	}
+	if input.Activities != nil {
+		trainer.Activities = input.Activities
+	}
 
 	//TODO:input validation
 
