@@ -1,8 +1,10 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -27,7 +29,10 @@ func (t TrainerModel) Insert(trainer *Trainer) error {
 
 	args := []interface{}{trainer.Email, trainer.Name, trainer.Experience, pq.Array(trainer.Activities)}
 
-	return t.DB.QueryRow(query, args...).Scan(&trainer.ID)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return t.DB.QueryRowContext(ctx, query, args...).Scan(&trainer.ID)
 }
 
 func (t TrainerModel) Get(id int64) (*Trainer, error) {
@@ -41,7 +46,10 @@ func (t TrainerModel) Get(id int64) (*Trainer, error) {
 
 	var trainer Trainer
 
-	err := t.DB.QueryRow(query, id).Scan(
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := t.DB.QueryRowContext(ctx, query, id).Scan(
 		&trainer.ID,
 		&trainer.Email,
 		&trainer.Name,
@@ -61,7 +69,10 @@ func (t TrainerModel) Get(id int64) (*Trainer, error) {
 }
 
 func (t TrainerModel) GetAll() ([]*Trainer, error) {
-	rows, err := t.DB.Query("SELECT * FROM trainers")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := t.DB.QueryContext(ctx, "SELECT * FROM trainers")
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -109,7 +120,20 @@ func (t TrainerModel) Update(trainer *Trainer) error {
 		trainer.ID,
 	}
 
-	return t.DB.QueryRow(query, args...).Scan(&trainer.ID)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := t.DB.QueryRowContext(ctx, query, args...).Scan(&trainer.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (t TrainerModel) Delete(id int64) error {
@@ -122,7 +146,10 @@ func (t TrainerModel) Delete(id int64) error {
 		WHERE id = $1
 	`
 
-	result, err := t.DB.Exec(query, id)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := t.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
