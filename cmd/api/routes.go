@@ -15,7 +15,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("POST /v1/trainers", app.createTrainerHandler)
 	mux.HandleFunc("GET /v1/trainers/{id}", app.showTrainerHandler)
 	mux.HandleFunc("GET /v1/trainers", app.showTrainersHandler)
-	mux.HandleFunc("PUT /v1/trainers/{id}", app.updateTrainerHandler)
+	mux.HandleFunc("PATCH /v1/trainers/{id}", app.updateTrainerHandler)
 	mux.HandleFunc("DELETE /v1/trainers/{id}", app.deleteTrainerHandler)
 
 	mux.HandleFunc("POST /v1/users", app.registerUserHandler)
