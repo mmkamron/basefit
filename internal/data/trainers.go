@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lib/pq"
@@ -68,23 +69,28 @@ func (t TrainerModel) Get(id int64) (*Trainer, error) {
 	return &trainer, nil
 }
 
-func (t TrainerModel) GetAll() ([]*Trainer, error) {
+func (t TrainerModel) GetAll(name string, activities []string, filters Filters) ([]*Trainer, error) {
+	query := fmt.Sprintf(`
+		SELECT id, email, name, experience, activities
+		FROM trainers
+		WHERE (LOWER(name) = LOWER($1) OR $1 = '')
+		AND (activities @> $2 OR $2 = '{}')
+		ORDER BY %s %s, id ASC`, filters.sortColumn(), filters.sortDirection())
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := t.DB.QueryContext(ctx, "SELECT * FROM trainers")
+	rows, err := t.DB.QueryContext(ctx, query, name, pq.Array(activities))
 	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, err
-		}
+		return nil, err
 	}
+	defer rows.Close()
 
-	trainers := make([]*Trainer, 0)
+	trainers := []*Trainer{}
+
 	for rows.Next() {
-		trainer := new(Trainer)
+		var trainer Trainer
+
 		err := rows.Scan(
 			&trainer.ID,
 			&trainer.Email,
@@ -95,8 +101,9 @@ func (t TrainerModel) GetAll() ([]*Trainer, error) {
 		if err != nil {
 			return nil, err
 		}
-		trainers = append(trainers, trainer)
+		trainers = append(trainers, &trainer)
 	}
+
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}

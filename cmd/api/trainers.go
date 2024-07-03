@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/mmkamron/basefit/internal/data"
+	"github.com/mmkamron/basefit/internal/validator"
 )
 
 func (app *application) createTrainerHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,24 +73,42 @@ func (app *application) showTrainerHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) showTrainersHandler(w http.ResponseWriter, r *http.Request) {
-	trainers, err := app.models.Trainers.GetAll()
-	if err != nil {
-		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
-		default:
-			app.serverErrorResponse(w, r, err)
-		}
+func (app *application) listTrainersHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Name       string
+		Activities []string
+		data.Filters
+	}
+
+	v := validator.New()
+
+	qs := r.URL.Query()
+
+	input.Name = app.readString(qs, "name", "")
+	input.Activities = app.readCSV(qs, "activities", []string{})
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 5, v)
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.SortSafeList = []string{"id", "name", "experience", "-id", "-name", "-experience"}
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
+
+	trainers, err := app.models.Trainers.GetAll(input.Name, input.Activities, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"trainers": trainers}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 }
 
-// TODO:fix data race - versioning
+// FIX:fix data race (versioning)
 func (app *application) updateTrainerHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
@@ -166,7 +185,7 @@ func (app *application) deleteTrainerHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"message": "movie successfully deleted"}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "trainer successfully deleted"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

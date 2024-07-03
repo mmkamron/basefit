@@ -51,7 +51,7 @@ func (app *application) serve() error {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	//TODO:find why graceful shutdown is not working
+	//FIX:graceful shutdown
 	shutdownError := make(chan error)
 
 	go func() {
