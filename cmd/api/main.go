@@ -28,7 +28,11 @@ type application struct {
 func main() {
 	cfg := config.Load("./config/local.yaml")
 	log := slog.Default()
-	db := db.Load(cfg)
+	db, err := db.Load(cfg)
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 	defer db.Close()
 	app := &application{
 		config: cfg,

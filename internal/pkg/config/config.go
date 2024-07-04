@@ -14,11 +14,14 @@ type Config struct {
 }
 
 type DB struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Name     string `yaml:"name"`
+	Host         string `yaml:"host"`
+	Port         int    `yaml:"port"`
+	User         string `yaml:"user"`
+	Password     string `yaml:"password"`
+	Name         string `yaml:"name"`
+	MaxOpenConns int    `yaml:"max-open-conns"`
+	MaxIdleConns int    `yaml:"max-idle-conns"`
+	MaxIdleTime  string `yaml:"max-idle-time"`
 }
 
 type Google struct {
