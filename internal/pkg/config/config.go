@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	Addr   string `yaml:"addr"`
-	DB     `yaml:"db"`
-	Google `yaml:"google"`
-	Smtp   `yaml:"smtp"`
+	Addr    string `yaml:"addr"`
+	DB      `yaml:"db"`
+	Google  `yaml:"google"`
+	Smtp    `yaml:"smtp"`
+	Limiter `yaml:"limiter"`
 }
 
 type DB struct {
@@ -35,6 +36,12 @@ type Smtp struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Sender   string `yaml:"sender"`
+}
+
+type Limiter struct {
+	Rps     float64
+	Burst   int
+	Enabled bool
 }
 
 func Load(path string) *Config {

@@ -16,6 +16,7 @@ require (
 	github.com/go-mail/mail v2.3.1+incompatible // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
+	golang.org/x/time v0.5.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
