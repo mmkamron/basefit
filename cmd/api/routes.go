@@ -6,10 +6,9 @@ import (
 
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/healthcheck",
-		app.requireActivatedUser(func(w http.ResponseWriter, r *http.Request) {
-			app.writeJSON(w, 200, "Hello", nil)
-		}))
+	mux.HandleFunc("GET /v1/healthcheck", func(w http.ResponseWriter, r *http.Request) {
+		app.writeJSON(w, 200, "Hello", nil)
+	})
 
 	mux.HandleFunc("GET /v1/trainers", app.requirePermission("movies:read", app.listTrainersHandler))
 	mux.HandleFunc("GET /v1/trainers/{id}", app.requirePermission("movies:read", app.showTrainerHandler))
@@ -21,5 +20,5 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("PUT /v1/users/activated", app.activateUserHandler)
 	mux.HandleFunc("POST /v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
-	return app.recoverPanic(app.rateLimit(app.authenticate(mux)))
+	return app.recoverPanic(app.enableCors(app.rateLimit(app.authenticate(mux))))
 }
