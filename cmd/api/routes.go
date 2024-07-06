@@ -11,11 +11,11 @@ func (app *application) routes() http.Handler {
 			app.writeJSON(w, 200, "Hello", nil)
 		}))
 
-	mux.HandleFunc("GET /v1/trainers", app.listTrainersHandler)
-	mux.HandleFunc("GET /v1/trainers/{id}", app.showTrainerHandler)
-	mux.HandleFunc("POST /v1/trainers", app.createTrainerHandler)
-	mux.HandleFunc("PATCH /v1/trainers/{id}", app.updateTrainerHandler)
-	mux.HandleFunc("DELETE /v1/trainers/{id}", app.deleteTrainerHandler)
+	mux.HandleFunc("GET /v1/trainers", app.requirePermission("movies:read", app.listTrainersHandler))
+	mux.HandleFunc("GET /v1/trainers/{id}", app.requirePermission("movies:read", app.showTrainerHandler))
+	mux.HandleFunc("POST /v1/trainers", app.requirePermission("movies:write", app.createTrainerHandler))
+	mux.HandleFunc("PATCH /v1/trainers/{id}", app.requirePermission("movies:write", app.updateTrainerHandler))
+	mux.HandleFunc("DELETE /v1/trainers/{id}", app.requirePermission("movies:write", app.deleteTrainerHandler))
 
 	mux.HandleFunc("POST /v1/users", app.registerUserHandler)
 	mux.HandleFunc("PUT /v1/users/activated", app.activateUserHandler)
