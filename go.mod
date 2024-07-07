@@ -13,6 +13,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-mail/mail v2.3.1+incompatible // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
